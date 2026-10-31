@@ -1,0 +1,9 @@
+export type ResumeTemplate = 'Ditgar' | 'Azurill' | 'Bronzor'
+export type Typeface = 'sans' | 'serif'
+export type PersonalInfo = { fullName: string; jobTitle: string; email: string; phone: string; location: string; website: string }
+export type ResumeExperience = { id: string; company: string; role: string; startDate: string; endDate: string; current: boolean; description: string }
+export type ResumeEducation = { id: string; school: string; degree: string; startDate: string; endDate: string }
+export type ResumeDesign = { template: ResumeTemplate; accentColor: string; typeface: Typeface }
+export type ResumeData = { personalInfo: PersonalInfo; summary: string; experience: ResumeExperience[]; education: ResumeEducation[]; skills: string[]; design: ResumeDesign }
+export type Resume = { id: string; title: string; template: string; data: ResumeData; createdAt: string; updatedAt: string }
+export type User = { id: string; name: string; username: string | null; email: string; createdAt: string }

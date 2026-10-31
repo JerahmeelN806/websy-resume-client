@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+html, body, #root { min-height: 100%; overflow-x: hidden; }
+
+@media (max-width: 767px) {
+  [role="dialog"] { max-height: 90dvh; overflow-y: auto; }
+  main:has(#resume-title) input:not([type="checkbox"]),
+  main:has(#resume-title) textarea,
+  main:has(#resume-title) button { min-height: 44px; }
+  main:has(#resume-title) #resume-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
