@@ -179,8 +179,8 @@ export default function Dashboard() {
     </article>
   );
   return (
-    <main className="min-h-dvh bg-slate-950 text-slate-100">
-      <aside className="hidden min-h-dvh w-64 flex-col border-r border-slate-800 bg-slate-900 px-4 py-5 md:flex">
+    <main className="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-100 md:flex-row">
+      <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900 px-4 py-5 md:flex">
         <Logo />
         <button
           type="button"
@@ -206,7 +206,7 @@ export default function Dashboard() {
           </button>
         </div>
       </aside>
-      <section className="min-w-0 px-4 pb-28 pt-6 md:ml-64 md:p-8 lg:p-12">
+      <section className="min-w-0 flex-1 overflow-y-auto px-4 pb-28 pt-6 md:p-8 lg:p-12">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs text-teal-300">Your workspace</p>

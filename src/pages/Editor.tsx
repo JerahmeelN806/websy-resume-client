@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Check, ChevronDown, CloudCheck, Download, History, ListChecks, LoaderCircle, Palette, Pencil, Share2 } from "lucide-react";
 import { apiRequest } from "../lib/api";
 import type {
   PersonalInfo,
@@ -105,14 +106,15 @@ function Section({
   onToggle: () => void;
 }) {
   return (
-    <section className="border-b border-stone-800">
+    <section className="overflow-hidden rounded-xl border border-stone-800 bg-[#211f1c] transition-colors hover:border-stone-700">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center justify-between py-4 text-left font-semibold text-white"
+        className="flex w-full items-center justify-between px-4 py-4 text-left font-semibold text-white outline-none transition-colors hover:bg-stone-800/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-400 [&>span]:sr-only"
       >
         {title}
+        <ChevronDown size={18} strokeWidth={1.75} className={`text-stone-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         <span aria-hidden="true">{open ? "−" : "+"}</span>
       </button>
       {open && <div className="space-y-3 pb-5">{children}</div>}
@@ -430,10 +432,12 @@ export default function Editor() {
           : "Saved";
   return (
     <main className="min-h-screen bg-[#151513] text-stone-100">
-      <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-stone-800 bg-[#151513] px-4 py-3 md:px-6">
+      <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-stone-800/90 bg-[#151513]/95 px-4 py-3 backdrop-blur md:px-6"><Link to="/dashboard" aria-label="Back to my documents" className="flex h-10 w-10 items-center justify-center rounded-lg text-teal-300 hover:bg-teal-400/10"><ArrowLeft size={18} /></Link><div className="min-w-0 flex-1"><div className="flex items-center gap-1"><input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Resume title" className="w-full max-w-xs bg-transparent text-lg font-semibold outline-none focus:ring-2 focus:ring-teal-400"/><ChevronDown size={16} className="text-stone-500"/></div><span className="flex items-center gap-1 text-xs text-stone-400">{saveState === "saving" ? <LoaderCircle size={14} className="animate-spin"/> : <CloudCheck size={14}/>} {saveState === "saving" ? "Saving…" : "Saved"}</span></div><nav className="hidden items-center rounded-xl border border-stone-800 bg-stone-900/70 p-1 sm:flex"><button className="flex items-center gap-2 rounded-lg bg-teal-400 px-3 py-2 text-sm font-medium text-stone-950"><Pencil size={16}/>Write</button><button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-stone-300 hover:bg-stone-800"><Palette size={16}/>Design</button><button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-stone-300 hover:bg-stone-800"><ListChecks size={16}/>Check<span className="rounded-full bg-stone-700 px-1.5 text-xs">0</span></button><button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-stone-300 hover:bg-stone-800"><Share2 size={16}/>Share</button></nav><button aria-label="Version history" className="rounded-lg p-2 text-stone-400 hover:bg-stone-800"><History size={18}/></button><button className="flex items-center gap-2 rounded-lg bg-teal-400 px-4 py-2 font-semibold text-stone-950 hover:bg-teal-300"><Download size={18}/>Download PDF</button></header>
+      <header className="hidden">
         <Link
           to="/dashboard"
-          className="text-sm text-teal-300 hover:text-teal-200"
+          aria-label="Back to my documents"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-teal-300 transition hover:bg-teal-400/10 hover:text-teal-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
         >
           ← My documents
         </Link>
@@ -445,7 +449,7 @@ export default function Editor() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={150}
-          className="min-w-40 flex-1 bg-transparent text-lg font-semibold outline-none focus:ring-1 focus:ring-teal-400"
+          className="min-w-40 flex-1 bg-transparent text-lg font-semibold outline-none focus:ring-2 focus:ring-teal-400"
         />
         <span
           role="status"
