@@ -1,49 +1,954 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { apiRequest } from '../lib/api'
-import type { PersonalInfo, Resume, ResumeData, ResumeEducation, ResumeExperience, ResumeTemplate } from '../types/resume'
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { apiRequest } from "../lib/api";
+import type {
+  PersonalInfo,
+  Resume,
+  ResumeData,
+  ResumeEducation,
+  ResumeExperience,
+  ResumeTemplate,
+} from "../types/resume";
 
-type SaveState = 'saved' | 'saving' | 'unsaved' | 'error'
-type Tab = 'edit' | 'preview'
-const colors = ['#14b8a6', '#22c55e', '#f97316']
-const templates: ResumeTemplate[] = ['Ditgar', 'Azurill', 'Bronzor']
-const emptyPersonal: PersonalInfo = { fullName: '', jobTitle: '', email: '', phone: '', location: '', website: '' }
-const emptyData = (): ResumeData => ({ personalInfo: { ...emptyPersonal }, summary: '', experience: [], education: [], skills: [], design: { template: 'Ditgar', accentColor: colors[0], typeface: 'sans' } })
-const id = () => crypto.randomUUID()
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
-const string = (value: unknown) => typeof value === 'string' ? value : ''
+type SaveState = "saved" | "saving" | "unsaved" | "error";
+type Tab = "edit" | "preview";
+const colors = ["#14b8a6", "#22c55e", "#f97316"];
+const templates: ResumeTemplate[] = ["Ditgar", "Azurill", "Bronzor"];
+const emptyPersonal: PersonalInfo = {
+  fullName: "",
+  jobTitle: "",
+  email: "",
+  phone: "",
+  location: "",
+  website: "",
+};
+const emptyData = (): ResumeData => ({
+  personalInfo: { ...emptyPersonal },
+  summary: "",
+  experience: [],
+  education: [],
+  skills: [],
+  design: { template: "Ditgar", accentColor: colors[0], typeface: "sans" },
+});
+const id = () => crypto.randomUUID();
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+const string = (value: unknown) => (typeof value === "string" ? value : "");
 
 function normaliseData(value: unknown): ResumeData {
-  const base = emptyData(); if (!isRecord(value)) return base
-  const personal = isRecord(value.personalInfo) ? value.personalInfo : {}
-  const design = isRecord(value.design) ? value.design : {}
-  const template = templates.includes(design.template as ResumeTemplate) ? design.template as ResumeTemplate : base.design.template
-  const experiences = Array.isArray(value.experience) ? value.experience.filter(isRecord).map((item): ResumeExperience => ({ id: string(item.id) || id(), company: string(item.company), role: string(item.role), startDate: string(item.startDate), endDate: string(item.endDate), current: item.current === true, description: string(item.description) })) : []
-  const education = Array.isArray(value.education) ? value.education.filter(isRecord).map((item): ResumeEducation => ({ id: string(item.id) || id(), school: string(item.school || item.institution), degree: string(item.degree), startDate: string(item.startDate), endDate: string(item.endDate) })) : []
-  return { personalInfo: { fullName: string(personal.fullName || personal.name), jobTitle: string(personal.jobTitle || personal.headline), email: string(personal.email), phone: string(personal.phone), location: string(personal.location), website: string(personal.website || personal.linkedin) }, summary: string(value.summary), experience: experiences, education, skills: Array.isArray(value.skills) ? value.skills.filter((skill): skill is string => typeof skill === 'string') : [], design: { template, accentColor: /^#[0-9a-fA-F]{6}$/.test(string(design.accentColor)) ? string(design.accentColor) : base.design.accentColor, typeface: design.typeface === 'serif' ? 'serif' : 'sans' } }
+  const base = emptyData();
+  if (!isRecord(value)) return base;
+  const personal = isRecord(value.personalInfo) ? value.personalInfo : {};
+  const design = isRecord(value.design) ? value.design : {};
+  const template = templates.includes(design.template as ResumeTemplate)
+    ? (design.template as ResumeTemplate)
+    : base.design.template;
+  const experiences = Array.isArray(value.experience)
+    ? value.experience
+        .filter(isRecord)
+        .map((item): ResumeExperience => ({
+          id: string(item.id) || id(),
+          company: string(item.company),
+          role: string(item.role),
+          startDate: string(item.startDate),
+          endDate: string(item.endDate),
+          current: item.current === true,
+          description: string(item.description),
+        }))
+    : [];
+  const education = Array.isArray(value.education)
+    ? value.education
+        .filter(isRecord)
+        .map((item): ResumeEducation => ({
+          id: string(item.id) || id(),
+          school: string(item.school || item.institution),
+          degree: string(item.degree),
+          startDate: string(item.startDate),
+          endDate: string(item.endDate),
+        }))
+    : [];
+  return {
+    personalInfo: {
+      fullName: string(personal.fullName || personal.name),
+      jobTitle: string(personal.jobTitle || personal.headline),
+      email: string(personal.email),
+      phone: string(personal.phone),
+      location: string(personal.location),
+      website: string(personal.website || personal.linkedin),
+    },
+    summary: string(value.summary),
+    experience: experiences,
+    education,
+    skills: Array.isArray(value.skills)
+      ? value.skills.filter(
+          (skill): skill is string => typeof skill === "string",
+        )
+      : [],
+    design: {
+      template,
+      accentColor: /^#[0-9a-fA-F]{6}$/.test(string(design.accentColor))
+        ? string(design.accentColor)
+        : base.design.accentColor,
+      typeface: design.typeface === "serif" ? "serif" : "sans",
+    },
+  };
 }
-function Section({ title, children, open, onToggle }: { title: string; children: React.ReactNode; open: boolean; onToggle: () => void }) { return <section className="border-b border-stone-800"><button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center justify-between py-4 text-left font-semibold text-white">{title}<span aria-hidden="true">{open ? '−' : '+'}</span></button>{open && <div className="space-y-3 pb-5">{children}</div>}</section> }
-function Field({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (value: string) => void; type?: string }) { const fieldId = `field-${label.replace(/\W+/g, '-').toLowerCase()}`; return <label htmlFor={fieldId} className="block text-sm text-stone-300">{label}<input id={fieldId} type={type} value={value} onChange={e => onChange(e.target.value)} className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-3 py-2 text-white outline-none focus:border-teal-400" /></label> }
+function Section({
+  title,
+  children,
+  open,
+  onToggle,
+}: {
+  title: string;
+  children: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <section className="border-b border-stone-800">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between py-4 text-left font-semibold text-white"
+      >
+        {title}
+        <span aria-hidden="true">{open ? "−" : "+"}</span>
+      </button>
+      {open && <div className="space-y-3 pb-5">{children}</div>}
+    </section>
+  );
+}
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  const fieldId = `field-${label.replace(/\W+/g, "-").toLowerCase()}`;
+  return (
+    <label htmlFor={fieldId} className="block text-sm text-stone-300">
+      {label}
+      <input
+        id={fieldId}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 px-3 py-2 text-white outline-none focus:border-teal-400"
+      />
+    </label>
+  );
+}
 function Preview({ data }: { data: ResumeData }) {
- const { personalInfo: p, design: d } = data; const font = d.typeface === 'serif' ? 'font-serif' : 'font-sans'; const contact = [p.email, p.phone, p.location, p.website].filter(Boolean).join(' · ')
- const content = <><h2 className="mt-6 border-b pb-1 text-xs font-bold uppercase tracking-widest" style={{ borderColor: d.accentColor }}>Profile</h2>{data.summary && <p className="mt-2 whitespace-pre-wrap text-xs leading-5">{data.summary}</p>}{data.experience.length > 0 && <><h2 className="mt-6 border-b pb-1 text-xs font-bold uppercase tracking-widest" style={{ borderColor: d.accentColor }}>Experience</h2>{data.experience.map(x => <div key={x.id} className="mt-3 text-xs"><b>{x.role}{x.company && ` · ${x.company}`}</b><p className="text-[10px] text-stone-500">{x.startDate}{(x.endDate || x.current) && ` — ${x.current ? 'Present' : x.endDate}`}</p>{x.description && <p className="mt-1 whitespace-pre-wrap leading-4">{x.description}</p>}</div>)}</>}{data.education.length > 0 && <><h2 className="mt-6 border-b pb-1 text-xs font-bold uppercase tracking-widest" style={{ borderColor: d.accentColor }}>Education</h2>{data.education.map(x => <p key={x.id} className="mt-2 text-xs"><b>{x.degree}</b>{x.school && ` · ${x.school}`}<span className="block text-[10px] text-stone-500">{x.startDate}{x.endDate && ` — ${x.endDate}`}</span></p>)}</>}{data.skills.length > 0 && <><h2 className="mt-6 border-b pb-1 text-xs font-bold uppercase tracking-widest" style={{ borderColor: d.accentColor }}>Skills</h2><p className="mt-2 text-xs">{data.skills.join(' · ')}</p></>}</>
- if (d.template === 'Azurill') return <article className={`min-h-full bg-white p-7 text-stone-800 ${font}`}><header className="-mx-7 -mt-7 p-7 text-white" style={{ background: d.accentColor }}><h1 className="text-2xl font-bold">{p.fullName || 'Your name'}</h1><p className="mt-1 text-sm">{p.jobTitle}</p><p className="mt-3 text-[10px] opacity-90">{contact}</p></header>{content}</article>
- if (d.template === 'Bronzor') return <article className={`grid min-h-full grid-cols-[35%_1fr] bg-white text-stone-800 ${font}`}><aside className="p-5 text-white" style={{ background: d.accentColor }}><h1 className="text-xl font-bold">{p.fullName || 'Your name'}</h1><p className="mt-2 text-xs">{p.jobTitle}</p><p className="mt-6 break-words text-[10px] leading-4">{contact}</p>{data.skills.length > 0 && <><h2 className="mt-8 text-xs font-bold uppercase">Skills</h2><p className="mt-2 text-[10px] leading-4">{data.skills.join('\n')}</p></>}</aside><main className="p-6">{content}</main></article>
- return <article className={`min-h-full bg-white p-7 text-stone-800 ${font}`}><header className="border-b-4 pb-4" style={{ borderColor: d.accentColor }}><h1 className="text-3xl font-bold">{p.fullName || 'Your name'}</h1><p className="mt-1 text-sm" style={{ color: d.accentColor }}>{p.jobTitle}</p><p className="mt-2 text-[10px] text-stone-500">{contact}</p></header>{content}</article>
+  const { personalInfo: p, design: d } = data;
+  const font = d.typeface === "serif" ? "font-serif" : "font-sans";
+  const contact = [p.email, p.phone, p.location, p.website]
+    .filter(Boolean)
+    .join(" · ");
+  const content = (
+    <>
+      <h2
+        className="mt-6 border-b pb-1 text-xs font-bold uppercase tracking-widest"
+        style={{ borderColor: d.accentColor }}
+      >
+        Profile
+      </h2>
+      {data.summary && (
+        <p className="mt-2 whitespace-pre-wrap text-xs leading-5">
+          {data.summary}
+        </p>
+      )}
+      {data.experience.length > 0 && (
+        <>
+          <h2
+            className="mt-6 border-b pb-1 text-xs font-bold uppercase tracking-widest"
+            style={{ borderColor: d.accentColor }}
+          >
+            Experience
+          </h2>
+          {data.experience.map((x) => (
+            <div key={x.id} className="mt-3 text-xs">
+              <b>
+                {x.role}
+                {x.company && ` · ${x.company}`}
+              </b>
+              <p className="text-[10px] text-stone-500">
+                {x.startDate}
+                {(x.endDate || x.current) &&
+                  ` — ${x.current ? "Present" : x.endDate}`}
+              </p>
+              {x.description && (
+                <p className="mt-1 whitespace-pre-wrap leading-4">
+                  {x.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+      {data.education.length > 0 && (
+        <>
+          <h2
+            className="mt-6 border-b pb-1 text-xs font-bold uppercase tracking-widest"
+            style={{ borderColor: d.accentColor }}
+          >
+            Education
+          </h2>
+          {data.education.map((x) => (
+            <p key={x.id} className="mt-2 text-xs">
+              <b>{x.degree}</b>
+              {x.school && ` · ${x.school}`}
+              <span className="block text-[10px] text-stone-500">
+                {x.startDate}
+                {x.endDate && ` — ${x.endDate}`}
+              </span>
+            </p>
+          ))}
+        </>
+      )}
+      {data.skills.length > 0 && (
+        <>
+          <h2
+            className="mt-6 border-b pb-1 text-xs font-bold uppercase tracking-widest"
+            style={{ borderColor: d.accentColor }}
+          >
+            Skills
+          </h2>
+          <p className="mt-2 text-xs">{data.skills.join(" · ")}</p>
+        </>
+      )}
+    </>
+  );
+  if (d.template === "Azurill")
+    return (
+      <article className={`min-h-full bg-white p-7 text-stone-800 ${font}`}>
+        <header
+          className="-mx-7 -mt-7 p-7 text-white"
+          style={{ background: d.accentColor }}
+        >
+          <h1 className="text-2xl font-bold">{p.fullName || "Your name"}</h1>
+          <p className="mt-1 text-sm">{p.jobTitle}</p>
+          <p className="mt-3 text-[10px] opacity-90">{contact}</p>
+        </header>
+        {content}
+      </article>
+    );
+  if (d.template === "Bronzor")
+    return (
+      <article
+        className={`grid min-h-full grid-cols-[35%_1fr] bg-white text-stone-800 ${font}`}
+      >
+        <aside className="p-5 text-white" style={{ background: d.accentColor }}>
+          <h1 className="text-xl font-bold">{p.fullName || "Your name"}</h1>
+          <p className="mt-2 text-xs">{p.jobTitle}</p>
+          <p className="mt-6 break-words text-[10px] leading-4">{contact}</p>
+          {data.skills.length > 0 && (
+            <>
+              <h2 className="mt-8 text-xs font-bold uppercase">Skills</h2>
+              <p className="mt-2 text-[10px] leading-4">
+                {data.skills.join("\n")}
+              </p>
+            </>
+          )}
+        </aside>
+        <main className="p-6">{content}</main>
+      </article>
+    );
+  return (
+    <article className={`min-h-full bg-white p-7 text-stone-800 ${font}`}>
+      <header
+        className="border-b-4 pb-4"
+        style={{ borderColor: d.accentColor }}
+      >
+        <h1 className="text-3xl font-bold">{p.fullName || "Your name"}</h1>
+        <p className="mt-1 text-sm" style={{ color: d.accentColor }}>
+          {p.jobTitle}
+        </p>
+        <p className="mt-2 text-[10px] text-stone-500">{contact}</p>
+      </header>
+      {content}
+    </article>
+  );
 }
 
 export default function Editor() {
- const [params] = useSearchParams(); const resumeId = params.get('id'); const [title, setTitle] = useState(''); const [data, setData] = useState<ResumeData>(emptyData); const [loading, setLoading] = useState(Boolean(resumeId)); const [loadError, setLoadError] = useState(''); const [saveState, setSaveState] = useState<SaveState>('saved'); const [tab, setTab] = useState<Tab>('edit'); const [open, setOpen] = useState('Personal info'); const [skill, setSkill] = useState(''); const savedRef = useRef(''); const version = useRef(0)
- const snapshot = useMemo(() => JSON.stringify({ title, data }), [title, data])
- useEffect(() => { if (!resumeId) { setLoadError('No resume was selected.'); setLoading(false); return } let alive = true; apiRequest<{ resume: Resume }>(`/api/resumes/${encodeURIComponent(resumeId)}`).then(({ resume }) => { if (!alive) return; const next = normaliseData(resume.data); setTitle(resume.title); setData(next); savedRef.current = JSON.stringify({ title: resume.title, data: next }) }).catch((error: unknown) => { if (alive) setLoadError(error instanceof Error ? error.message : 'Unable to load this resume.') }).finally(() => { if (alive) setLoading(false) }); return () => { alive = false } }, [resumeId])
- useEffect(() => { if (loading || !resumeId || snapshot === savedRef.current) return; setSaveState('unsaved'); const timer = window.setTimeout(() => { const requestVersion = ++version.current; setSaveState('saving'); apiRequest<{ resume: Resume }>(`/api/resumes/${encodeURIComponent(resumeId)}`, { method: 'PATCH', body: snapshot }).then(() => { if (requestVersion === version.current) { savedRef.current = snapshot; setSaveState('saved') } }).catch(() => { if (requestVersion === version.current) setSaveState('error') }) }, 800); return () => window.clearTimeout(timer) }, [snapshot, loading, resumeId])
- useEffect(() => { const warn = (event: BeforeUnloadEvent) => { if (snapshot !== savedRef.current) { event.preventDefault(); event.returnValue = '' } }; addEventListener('beforeunload', warn); return () => removeEventListener('beforeunload', warn) }, [snapshot])
- const retry = useCallback(() => { if (!resumeId) return; const requestVersion = ++version.current; setSaveState('saving'); apiRequest<{ resume: Resume }>(`/api/resumes/${encodeURIComponent(resumeId)}`, { method: 'PATCH', body: JSON.stringify({ title, data }) }).then(() => { if (requestVersion === version.current) { savedRef.current = JSON.stringify({ title, data }); setSaveState('saved') } }).catch(() => { if (requestVersion === version.current) setSaveState('error') }) }, [data, resumeId, title])
- const personal = (key: keyof PersonalInfo, value: string) => setData(current => ({ ...current, personalInfo: { ...current.personalInfo, [key]: value } }))
- const addSkill = () => { const next = skill.trim(); if (next && !data.skills.includes(next)) setData(current => ({ ...current, skills: [...current.skills, next] })); setSkill('') }
- const move = <T extends { id: string }>(items: T[], itemId: string, amount: number) => { const index = items.findIndex(x => x.id === itemId); const target = index + amount; if (index < 0 || target < 0 || target >= items.length) return items; const result = [...items]; [result[index], result[target]] = [result[target], result[index]]; return result }
- if (loading) return <main className="min-h-screen bg-slate-950 p-10 text-slate-300">Loading resume…</main>
- if (loadError) return <main className="min-h-screen bg-slate-950 p-10 text-slate-100"><Link to="/dashboard" className="text-teal-300">← My documents</Link><h1 className="mt-8 text-2xl font-semibold">{loadError.includes('not found') ? 'Resume not found' : 'Unable to open resume'}</h1><p className="mt-2 text-slate-400">{loadError.includes('not found') ? 'This resume does not exist or does not belong to you.' : loadError}</p></main>
- const status = saveState === 'saving' ? 'Saving…' : saveState === 'error' ? "Couldn't save, retry" : saveState === 'unsaved' ? 'Changes pending…' : 'Saved'
- return <main className="min-h-screen bg-[#151513] text-stone-100"><header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-stone-800 bg-[#151513] px-4 py-3 md:px-6"><Link to="/dashboard" className="text-sm text-teal-300 hover:text-teal-200">← My documents</Link><label className="sr-only" htmlFor="resume-title">Resume title</label><input id="resume-title" value={title} onChange={e => setTitle(e.target.value)} maxLength={150} className="min-w-40 flex-1 bg-transparent text-lg font-semibold outline-none focus:ring-1 focus:ring-teal-400" /><span role="status" className={saveState === 'error' ? 'text-sm text-rose-300' : 'text-sm text-stone-400'}>{saveState === 'error' ? <button type="button" onClick={retry} className="underline">{status}</button> : status}</span><span className="group relative"><button type="button" disabled className="rounded-lg bg-stone-700 px-4 py-2 text-sm font-semibold text-stone-400">Download PDF</button><span className="pointer-events-none absolute right-0 top-full mt-2 w-max rounded bg-black px-2 py-1 text-xs opacity-0 group-hover:opacity-100">Coming soon</span></span></header><div className="border-b border-stone-800 p-2 md:hidden"><button onClick={() => setTab('edit')} className={`mr-2 rounded px-3 py-1 ${tab === 'edit' ? 'bg-teal-400 text-black' : ''}`}>Edit</button><button onClick={() => setTab('preview')} className={`rounded px-3 py-1 ${tab === 'preview' ? 'bg-teal-400 text-black' : ''}`}>Preview</button></div><div className="mx-auto grid max-w-7xl gap-6 p-4 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)] md:p-6"><div className={tab === 'preview' ? 'hidden md:block' : ''}><div className="rounded-xl border border-stone-800 bg-[#1d1c19] px-5">{(['Personal info', 'Summary', 'Experience', 'Education', 'Skills', 'Design'] as const).map(section => <Section key={section} title={section} open={open === section} onToggle={() => setOpen(open === section ? '' : section)}>{section === 'Personal info' && <div className="grid gap-3 sm:grid-cols-2"><Field label="Full name" value={data.personalInfo.fullName} onChange={v => personal('fullName', v)} /><Field label="Job title" value={data.personalInfo.jobTitle} onChange={v => personal('jobTitle', v)} /><Field label="Email" type="email" value={data.personalInfo.email} onChange={v => personal('email', v)} /><Field label="Phone" value={data.personalInfo.phone} onChange={v => personal('phone', v)} /><Field label="Location" value={data.personalInfo.location} onChange={v => personal('location', v)} /><Field label="Website or LinkedIn" value={data.personalInfo.website} onChange={v => personal('website', v)} /></div>}{section === 'Summary' && <label className="block text-sm text-stone-300">Professional summary<textarea value={data.summary} onChange={e => setData(x => ({ ...x, summary: e.target.value }))} rows={6} className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 p-3 text-white focus:border-teal-400" /></label>}{section === 'Experience' && <div className="space-y-5">{data.experience.map((item, index) => <div key={item.id} className="rounded-lg border border-stone-700 p-3"><div className="mb-3 flex justify-end gap-2"><button type="button" onClick={() => setData(x => ({ ...x, experience: move(x.experience, item.id, -1) }))} disabled={index === 0} aria-label="Move experience up">↑</button><button type="button" onClick={() => setData(x => ({ ...x, experience: move(x.experience, item.id, 1) }))} disabled={index === data.experience.length - 1} aria-label="Move experience down">↓</button><button type="button" onClick={() => setData(x => ({ ...x, experience: x.experience.filter(e => e.id !== item.id) }))} className="text-rose-300">Remove</button></div><div className="grid gap-3 sm:grid-cols-2">{(['company', 'role', 'startDate', 'endDate'] as const).map(key => <Field key={key} label={key === 'startDate' ? 'Start date' : key === 'endDate' ? 'End date' : key[0].toUpperCase() + key.slice(1)} value={item[key]} onChange={v => setData(x => ({ ...x, experience: x.experience.map(e => e.id === item.id ? { ...e, [key]: v } : e) }))} />)}</div><label className="mt-3 flex gap-2 text-sm"><input type="checkbox" checked={item.current} onChange={e => setData(x => ({ ...x, experience: x.experience.map(job => job.id === item.id ? { ...job, current: e.target.checked, endDate: e.target.checked ? '' : job.endDate } : job) }))} />Current role</label><label className="mt-3 block text-sm">Description<textarea value={item.description} onChange={e => setData(x => ({ ...x, experience: x.experience.map(job => job.id === item.id ? { ...job, description: e.target.value } : job) }))} rows={4} className="mt-1 w-full rounded border border-stone-700 bg-stone-900 p-2" /></label></div>)}<button type="button" onClick={() => setData(x => ({ ...x, experience: [...x.experience, { id: id(), company: '', role: '', startDate: '', endDate: '', current: false, description: '' }] }))} className="text-teal-300">+ Add experience</button></div>}{section === 'Education' && <div className="space-y-4">{data.education.map((item, index) => <div key={item.id} className="rounded-lg border border-stone-700 p-3"><div className="mb-3 flex justify-end gap-2"><button type="button" onClick={() => setData(x => ({ ...x, education: move(x.education, item.id, -1) }))} disabled={index === 0} aria-label="Move education up">↑</button><button type="button" onClick={() => setData(x => ({ ...x, education: move(x.education, item.id, 1) }))} disabled={index === data.education.length - 1} aria-label="Move education down">↓</button><button type="button" onClick={() => setData(x => ({ ...x, education: x.education.filter(e => e.id !== item.id) }))} className="text-rose-300">Remove</button></div><div className="grid gap-3 sm:grid-cols-2">{(['school', 'degree', 'startDate', 'endDate'] as const).map(key => <Field key={key} label={key === 'school' ? 'School' : key === 'startDate' ? 'Start date' : key === 'endDate' ? 'End date' : 'Degree'} value={item[key]} onChange={v => setData(x => ({ ...x, education: x.education.map(e => e.id === item.id ? { ...e, [key]: v } : e) }))} />)}</div></div>)}<button type="button" onClick={() => setData(x => ({ ...x, education: [...x.education, { id: id(), school: '', degree: '', startDate: '', endDate: '' }] }))} className="text-teal-300">+ Add education</button></div>}{section === 'Skills' && <><div className="flex flex-wrap gap-2">{data.skills.map(value => <span key={value} className="rounded-full bg-stone-800 px-3 py-1 text-sm">{value}<button type="button" aria-label={`Remove ${value}`} onClick={() => setData(x => ({ ...x, skills: x.skills.filter(s => s !== value) }))} className="ml-2 text-stone-400 hover:text-white">×</button></span>)}</div><label className="sr-only" htmlFor="new-skill">Add a skill</label><input id="new-skill" value={skill} onChange={e => setSkill(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill() } }} placeholder="Type a skill and press Enter" className="w-full rounded-lg border border-stone-700 bg-stone-900 px-3 py-2" /></>}{section === 'Design' && <div className="space-y-4"><fieldset><legend className="text-sm">Template</legend><div className="mt-2 flex gap-2">{templates.map(value => <button type="button" key={value} onClick={() => setData(x => ({ ...x, design: { ...x.design, template: value } }))} className={`rounded px-3 py-2 text-sm ${data.design.template === value ? 'bg-teal-400 text-black' : 'bg-stone-800'}`}>{value}</button>)}</div></fieldset><fieldset><legend className="text-sm">Accent color</legend><div className="mt-2 flex items-center gap-2">{colors.map(value => <button type="button" key={value} aria-label={`Use ${value}`} onClick={() => setData(x => ({ ...x, design: { ...x.design, accentColor: value } }))} className={`h-8 w-8 rounded-full border-2 ${data.design.accentColor === value ? 'border-white' : 'border-transparent'}`} style={{ backgroundColor: value }} />)}<label className="text-sm">Custom <input aria-label="Custom accent color" type="color" value={data.design.accentColor} onChange={e => setData(x => ({ ...x, design: { ...x.design, accentColor: e.target.value } }))} className="ml-2 h-8 w-10 align-middle" /></label></div></fieldset><fieldset><legend className="text-sm">Typeface</legend><div className="mt-2"><button type="button" onClick={() => setData(x => ({ ...x, design: { ...x.design, typeface: 'sans' } }))} className={`rounded-l px-3 py-2 ${data.design.typeface === 'sans' ? 'bg-teal-400 text-black' : 'bg-stone-800'}`}>Sans</button><button type="button" onClick={() => setData(x => ({ ...x, design: { ...x.design, typeface: 'serif' } }))} className={`rounded-r px-3 py-2 ${data.design.typeface === 'serif' ? 'bg-teal-400 text-black' : 'bg-stone-800'}`}>Serif</button></div></fieldset></div>}</Section>)}</div></div><div className={tab === 'edit' ? 'hidden md:block' : ''}><div className="sticky top-24 mx-auto aspect-[1/1.414] max-w-[560px] overflow-hidden shadow-2xl"><Preview data={data} /></div></div></div></main>
+  const [params] = useSearchParams();
+  const resumeId = params.get("id");
+  const [title, setTitle] = useState("");
+  const [data, setData] = useState<ResumeData>(emptyData);
+  const [loading, setLoading] = useState(Boolean(resumeId));
+  const [loadError, setLoadError] = useState(() =>
+    resumeId ? "" : "No resume was selected.",
+  );
+  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [tab, setTab] = useState<Tab>("edit");
+  const [open, setOpen] = useState("Personal info");
+  const [skill, setSkill] = useState("");
+  const savedRef = useRef("");
+  const version = useRef(0);
+  const snapshot = useMemo(
+    () => JSON.stringify({ title, data }),
+    [title, data],
+  );
+  useEffect(() => {
+    if (!resumeId) return;
+    let alive = true;
+    apiRequest<{ resume: Resume }>(
+      `/api/resumes/${encodeURIComponent(resumeId)}`,
+    )
+      .then(({ resume }) => {
+        if (!alive) return;
+        const next = normaliseData(resume.data);
+        setTitle(resume.title);
+        setData(next);
+        savedRef.current = JSON.stringify({ title: resume.title, data: next });
+      })
+      .catch((error: unknown) => {
+        if (alive)
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load this resume.",
+          );
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [resumeId]);
+  useEffect(() => {
+    if (loading || !resumeId || snapshot === savedRef.current) return;
+    setSaveState("unsaved");
+    const timer = window.setTimeout(() => {
+      const requestVersion = ++version.current;
+      setSaveState("saving");
+      apiRequest<{ resume: Resume }>(
+        `/api/resumes/${encodeURIComponent(resumeId)}`,
+        { method: "PATCH", body: snapshot },
+      )
+        .then(() => {
+          if (requestVersion === version.current) {
+            savedRef.current = snapshot;
+            setSaveState("saved");
+          }
+        })
+        .catch(() => {
+          if (requestVersion === version.current) setSaveState("error");
+        });
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [snapshot, loading, resumeId]);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (snapshot !== savedRef.current) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    addEventListener("beforeunload", warn);
+    return () => removeEventListener("beforeunload", warn);
+  }, [snapshot]);
+  const retry = useCallback(() => {
+    if (!resumeId) return;
+    const requestVersion = ++version.current;
+    setSaveState("saving");
+    apiRequest<{ resume: Resume }>(
+      `/api/resumes/${encodeURIComponent(resumeId)}`,
+      { method: "PATCH", body: JSON.stringify({ title, data }) },
+    )
+      .then(() => {
+        if (requestVersion === version.current) {
+          savedRef.current = JSON.stringify({ title, data });
+          setSaveState("saved");
+        }
+      })
+      .catch(() => {
+        if (requestVersion === version.current) setSaveState("error");
+      });
+  }, [data, resumeId, title]);
+  const personal = (key: keyof PersonalInfo, value: string) =>
+    setData((current) => ({
+      ...current,
+      personalInfo: { ...current.personalInfo, [key]: value },
+    }));
+  const addSkill = () => {
+    const next = skill.trim();
+    if (next && !data.skills.includes(next))
+      setData((current) => ({ ...current, skills: [...current.skills, next] }));
+    setSkill("");
+  };
+  const move = <T extends { id: string }>(
+    items: T[],
+    itemId: string,
+    amount: number,
+  ) => {
+    const index = items.findIndex((x) => x.id === itemId);
+    const target = index + amount;
+    if (index < 0 || target < 0 || target >= items.length) return items;
+    const result = [...items];
+    [result[index], result[target]] = [result[target], result[index]];
+    return result;
+  };
+  if (loading)
+    return (
+      <main className="min-h-screen bg-slate-950 p-10 text-slate-300">
+        Loading resume…
+      </main>
+    );
+  if (loadError)
+    return (
+      <main className="min-h-screen bg-slate-950 p-10 text-slate-100">
+        <Link to="/dashboard" className="text-teal-300">
+          ← My documents
+        </Link>
+        <h1 className="mt-8 text-2xl font-semibold">
+          {loadError.includes("not found")
+            ? "Resume not found"
+            : "Unable to open resume"}
+        </h1>
+        <p className="mt-2 text-slate-400">
+          {loadError.includes("not found")
+            ? "This resume does not exist or does not belong to you."
+            : loadError}
+        </p>
+      </main>
+    );
+  const status =
+    saveState === "saving"
+      ? "Saving…"
+      : saveState === "error"
+        ? "Couldn't save, retry"
+        : saveState === "unsaved"
+          ? "Changes pending…"
+          : "Saved";
+  return (
+    <main className="min-h-screen bg-[#151513] text-stone-100">
+      <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-stone-800 bg-[#151513] px-4 py-3 md:px-6">
+        <Link
+          to="/dashboard"
+          className="text-sm text-teal-300 hover:text-teal-200"
+        >
+          ← My documents
+        </Link>
+        <label className="sr-only" htmlFor="resume-title">
+          Resume title
+        </label>
+        <input
+          id="resume-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={150}
+          className="min-w-40 flex-1 bg-transparent text-lg font-semibold outline-none focus:ring-1 focus:ring-teal-400"
+        />
+        <span
+          role="status"
+          className={
+            saveState === "error"
+              ? "text-sm text-rose-300"
+              : "text-sm text-stone-400"
+          }
+        >
+          {saveState === "error" ? (
+            <button type="button" onClick={retry} className="underline">
+              {status}
+            </button>
+          ) : (
+            status
+          )}
+        </span>
+        <span className="group relative">
+          <button
+            type="button"
+            disabled
+            className="rounded-lg bg-stone-700 px-4 py-2 text-sm font-semibold text-stone-400"
+          >
+            Download PDF
+          </button>
+          <span className="pointer-events-none absolute right-0 top-full mt-2 w-max rounded bg-black px-2 py-1 text-xs opacity-0 group-hover:opacity-100">
+            Coming soon
+          </span>
+        </span>
+      </header>
+      <div className="border-b border-stone-800 p-2 md:hidden">
+        <button
+          onClick={() => setTab("edit")}
+          className={`mr-2 rounded px-3 py-1 ${tab === "edit" ? "bg-teal-400 text-black" : ""}`}
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => setTab("preview")}
+          className={`rounded px-3 py-1 ${tab === "preview" ? "bg-teal-400 text-black" : ""}`}
+        >
+          Preview
+        </button>
+      </div>
+      <div className="mx-auto grid max-w-7xl gap-6 p-4 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)] md:p-6">
+        <div className={tab === "preview" ? "hidden md:block" : ""}>
+          <div className="rounded-xl border border-stone-800 bg-[#1d1c19] px-5">
+            {(
+              [
+                "Personal info",
+                "Summary",
+                "Experience",
+                "Education",
+                "Skills",
+                "Design",
+              ] as const
+            ).map((section) => (
+              <Section
+                key={section}
+                title={section}
+                open={open === section}
+                onToggle={() => setOpen(open === section ? "" : section)}
+              >
+                {section === "Personal info" && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field
+                      label="Full name"
+                      value={data.personalInfo.fullName}
+                      onChange={(v) => personal("fullName", v)}
+                    />
+                    <Field
+                      label="Job title"
+                      value={data.personalInfo.jobTitle}
+                      onChange={(v) => personal("jobTitle", v)}
+                    />
+                    <Field
+                      label="Email"
+                      type="email"
+                      value={data.personalInfo.email}
+                      onChange={(v) => personal("email", v)}
+                    />
+                    <Field
+                      label="Phone"
+                      value={data.personalInfo.phone}
+                      onChange={(v) => personal("phone", v)}
+                    />
+                    <Field
+                      label="Location"
+                      value={data.personalInfo.location}
+                      onChange={(v) => personal("location", v)}
+                    />
+                    <Field
+                      label="Website or LinkedIn"
+                      value={data.personalInfo.website}
+                      onChange={(v) => personal("website", v)}
+                    />
+                  </div>
+                )}
+                {section === "Summary" && (
+                  <label className="block text-sm text-stone-300">
+                    Professional summary
+                    <textarea
+                      value={data.summary}
+                      onChange={(e) =>
+                        setData((x) => ({ ...x, summary: e.target.value }))
+                      }
+                      rows={6}
+                      className="mt-1 w-full rounded-lg border border-stone-700 bg-stone-900 p-3 text-white focus:border-teal-400"
+                    />
+                  </label>
+                )}
+                {section === "Experience" && (
+                  <div className="space-y-5">
+                    {data.experience.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="rounded-lg border border-stone-700 p-3"
+                      >
+                        <div className="mb-3 flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                experience: move(x.experience, item.id, -1),
+                              }))
+                            }
+                            disabled={index === 0}
+                            aria-label="Move experience up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                experience: move(x.experience, item.id, 1),
+                              }))
+                            }
+                            disabled={index === data.experience.length - 1}
+                            aria-label="Move experience down"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                experience: x.experience.filter(
+                                  (e) => e.id !== item.id,
+                                ),
+                              }))
+                            }
+                            className="text-rose-300"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {(
+                            ["company", "role", "startDate", "endDate"] as const
+                          ).map((key) => (
+                            <Field
+                              key={key}
+                              label={
+                                key === "startDate"
+                                  ? "Start date"
+                                  : key === "endDate"
+                                    ? "End date"
+                                    : key[0].toUpperCase() + key.slice(1)
+                              }
+                              value={item[key]}
+                              onChange={(v) =>
+                                setData((x) => ({
+                                  ...x,
+                                  experience: x.experience.map((e) =>
+                                    e.id === item.id ? { ...e, [key]: v } : e,
+                                  ),
+                                }))
+                              }
+                            />
+                          ))}
+                        </div>
+                        <label className="mt-3 flex gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={item.current}
+                            onChange={(e) =>
+                              setData((x) => ({
+                                ...x,
+                                experience: x.experience.map((job) =>
+                                  job.id === item.id
+                                    ? {
+                                        ...job,
+                                        current: e.target.checked,
+                                        endDate: e.target.checked
+                                          ? ""
+                                          : job.endDate,
+                                      }
+                                    : job,
+                                ),
+                              }))
+                            }
+                          />
+                          Current role
+                        </label>
+                        <label className="mt-3 block text-sm">
+                          Description
+                          <textarea
+                            value={item.description}
+                            onChange={(e) =>
+                              setData((x) => ({
+                                ...x,
+                                experience: x.experience.map((job) =>
+                                  job.id === item.id
+                                    ? { ...job, description: e.target.value }
+                                    : job,
+                                ),
+                              }))
+                            }
+                            rows={4}
+                            className="mt-1 w-full rounded border border-stone-700 bg-stone-900 p-2"
+                          />
+                        </label>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setData((x) => ({
+                          ...x,
+                          experience: [
+                            ...x.experience,
+                            {
+                              id: id(),
+                              company: "",
+                              role: "",
+                              startDate: "",
+                              endDate: "",
+                              current: false,
+                              description: "",
+                            },
+                          ],
+                        }))
+                      }
+                      className="text-teal-300"
+                    >
+                      + Add experience
+                    </button>
+                  </div>
+                )}
+                {section === "Education" && (
+                  <div className="space-y-4">
+                    {data.education.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="rounded-lg border border-stone-700 p-3"
+                      >
+                        <div className="mb-3 flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                education: move(x.education, item.id, -1),
+                              }))
+                            }
+                            disabled={index === 0}
+                            aria-label="Move education up"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                education: move(x.education, item.id, 1),
+                              }))
+                            }
+                            disabled={index === data.education.length - 1}
+                            aria-label="Move education down"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                education: x.education.filter(
+                                  (e) => e.id !== item.id,
+                                ),
+                              }))
+                            }
+                            className="text-rose-300"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {(
+                            [
+                              "school",
+                              "degree",
+                              "startDate",
+                              "endDate",
+                            ] as const
+                          ).map((key) => (
+                            <Field
+                              key={key}
+                              label={
+                                key === "school"
+                                  ? "School"
+                                  : key === "startDate"
+                                    ? "Start date"
+                                    : key === "endDate"
+                                      ? "End date"
+                                      : "Degree"
+                              }
+                              value={item[key]}
+                              onChange={(v) =>
+                                setData((x) => ({
+                                  ...x,
+                                  education: x.education.map((e) =>
+                                    e.id === item.id ? { ...e, [key]: v } : e,
+                                  ),
+                                }))
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setData((x) => ({
+                          ...x,
+                          education: [
+                            ...x.education,
+                            {
+                              id: id(),
+                              school: "",
+                              degree: "",
+                              startDate: "",
+                              endDate: "",
+                            },
+                          ],
+                        }))
+                      }
+                      className="text-teal-300"
+                    >
+                      + Add education
+                    </button>
+                  </div>
+                )}
+                {section === "Skills" && (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {data.skills.map((value) => (
+                        <span
+                          key={value}
+                          className="rounded-full bg-stone-800 px-3 py-1 text-sm"
+                        >
+                          {value}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${value}`}
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                skills: x.skills.filter((s) => s !== value),
+                              }))
+                            }
+                            className="ml-2 text-stone-400 hover:text-white"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <label className="sr-only" htmlFor="new-skill">
+                      Add a skill
+                    </label>
+                    <input
+                      id="new-skill"
+                      value={skill}
+                      onChange={(e) => setSkill(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addSkill();
+                        }
+                      }}
+                      placeholder="Type a skill and press Enter"
+                      className="w-full rounded-lg border border-stone-700 bg-stone-900 px-3 py-2"
+                    />
+                  </>
+                )}
+                {section === "Design" && (
+                  <div className="space-y-4">
+                    <fieldset>
+                      <legend className="text-sm">Template</legend>
+                      <div className="mt-2 flex gap-2">
+                        {templates.map((value) => (
+                          <button
+                            type="button"
+                            key={value}
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                design: { ...x.design, template: value },
+                              }))
+                            }
+                            className={`rounded px-3 py-2 text-sm ${data.design.template === value ? "bg-teal-400 text-black" : "bg-stone-800"}`}
+                          >
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <fieldset>
+                      <legend className="text-sm">Accent color</legend>
+                      <div className="mt-2 flex items-center gap-2">
+                        {colors.map((value) => (
+                          <button
+                            type="button"
+                            key={value}
+                            aria-label={`Use ${value}`}
+                            onClick={() =>
+                              setData((x) => ({
+                                ...x,
+                                design: { ...x.design, accentColor: value },
+                              }))
+                            }
+                            className={`h-8 w-8 rounded-full border-2 ${data.design.accentColor === value ? "border-white" : "border-transparent"}`}
+                            style={{ backgroundColor: value }}
+                          />
+                        ))}
+                        <label className="text-sm">
+                          Custom{" "}
+                          <input
+                            aria-label="Custom accent color"
+                            type="color"
+                            value={data.design.accentColor}
+                            onChange={(e) =>
+                              setData((x) => ({
+                                ...x,
+                                design: {
+                                  ...x.design,
+                                  accentColor: e.target.value,
+                                },
+                              }))
+                            }
+                            className="ml-2 h-8 w-10 align-middle"
+                          />
+                        </label>
+                      </div>
+                    </fieldset>
+                    <fieldset>
+                      <legend className="text-sm">Typeface</legend>
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setData((x) => ({
+                              ...x,
+                              design: { ...x.design, typeface: "sans" },
+                            }))
+                          }
+                          className={`rounded-l px-3 py-2 ${data.design.typeface === "sans" ? "bg-teal-400 text-black" : "bg-stone-800"}`}
+                        >
+                          Sans
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setData((x) => ({
+                              ...x,
+                              design: { ...x.design, typeface: "serif" },
+                            }))
+                          }
+                          className={`rounded-r px-3 py-2 ${data.design.typeface === "serif" ? "bg-teal-400 text-black" : "bg-stone-800"}`}
+                        >
+                          Serif
+                        </button>
+                      </div>
+                    </fieldset>
+                  </div>
+                )}
+              </Section>
+            ))}
+          </div>
+        </div>
+        <div className={tab === "edit" ? "hidden md:block" : ""}>
+          <div className="sticky top-24 mx-auto aspect-[1/1.414] max-w-[560px] overflow-hidden shadow-2xl">
+            <Preview data={data} />
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }
