@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, ChevronDown, CloudCheck, Download, History, ListChecks, LoaderCircle, Palette, Pencil, Share2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, CloudCheck, Download, History, ListChecks, LoaderCircle, Palette, Pencil, Share2 } from "lucide-react";
 import { apiRequest } from "../lib/api";
 import type {
   PersonalInfo,
