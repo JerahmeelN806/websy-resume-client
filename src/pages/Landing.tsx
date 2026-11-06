@@ -16,7 +16,7 @@ export default function Landing() {
   const [font, setFont] = useState<'sans' | 'serif'>('sans')
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-black text-white">
+    <div id="top" className="min-h-dvh overflow-x-hidden bg-black text-white">
       <nav className="flex items-center justify-between gap-3 px-4 py-4 sm:px-8 sm:py-6">
         <Logo />
         <Link to="/signup" className="shrink-0 rounded-full bg-teal-500 px-3 py-2 text-xs font-bold text-black transition hover:bg-teal-400 sm:px-5 sm:py-2.5 sm:text-sm">

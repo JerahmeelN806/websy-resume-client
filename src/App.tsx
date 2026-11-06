@@ -7,6 +7,7 @@ import Signup from './pages/Signup'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Editor from './pages/Editor'
+import Legal from './pages/Legal'
 
 function App() {
   return (
@@ -14,6 +15,8 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/privacy" element={<Legal kind="privacy" />} />
+          <Route path="/terms" element={<Legal kind="terms" />} />
           <Route element={<GuestRoute />}>
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
