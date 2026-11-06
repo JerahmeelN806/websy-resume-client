@@ -2,6 +2,10 @@
 
 html, body, #root { min-height: 100%; overflow-x: hidden; }
 
+.landing-nav-cta { transition: transform 160ms ease, background-color 160ms ease; }
+@media (hover: hover) and (pointer: fine) { .landing-nav-cta:hover { transform: translateY(-1px) scale(1.025); background-color: var(--color-teal-400); } }
+.landing-nav-cta:active { transform: translateY(1px) scale(.98); }
+
 @media (max-width: 767px) {
   [role="dialog"] { max-height: 90dvh; overflow-y: auto; }
   main:has(#resume-title) input:not([type="checkbox"]),

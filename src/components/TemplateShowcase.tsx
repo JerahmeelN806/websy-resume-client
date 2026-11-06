@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { gsap } from '../lib/motion'
 
 const templates = ['Modern', 'Classic', 'Minimal']
 
@@ -8,17 +9,25 @@ const previewContent: Record<string, { accent: string; name: string; role: strin
   Minimal: { accent: '#6b7280', name: 'Jerahmeel Njoku', role: 'Frontend Developer' },
 }
 
-export default function TemplateShowcase() {
+export default function TemplateShowcase({ reducedMotion }: { reducedMotion: boolean }) {
   const [index, setIndex] = useState(0)
+  const card = useRef<HTMLDivElement>(null)
+  const busy = useRef(false)
   const active = templates[index]
   const preview = previewContent[active]
 
-  const next = () => setIndex((i) => (i + 1) % templates.length)
-  const prev = () => setIndex((i) => (i - 1 + templates.length) % templates.length)
+  const change = (nextIndex: number, direction: number) => {
+    if (busy.current || nextIndex === index) return
+    if (reducedMotion) return setIndex(nextIndex)
+    busy.current = true
+    gsap.to(card.current, { x: direction * -20, autoAlpha: 0, duration: .18, ease: 'power2.in', onComplete: () => { setIndex(nextIndex); gsap.fromTo(card.current, { x: direction * 20, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: .25, ease: 'power3.out', onComplete: () => { busy.current = false } }) } })
+  }
+  const next = () => change((index + 1) % templates.length, 1)
+  const prev = () => change((index - 1 + templates.length) % templates.length, -1)
 
   return (
-    <div className="max-w-6xl mx-auto border-t border-slate-800 px-4 py-12 sm:px-8 sm:py-20">
-      <div className="grid md:grid-cols-2 gap-8 mb-10">
+    <div data-reveal className="max-w-6xl mx-auto border-t border-slate-800 px-4 py-12 sm:px-8 sm:py-20">
+      <div data-reveal-child className="grid md:grid-cols-2 gap-8 mb-10">
         <h2 className="text-4xl font-bold leading-tight">
           Same story.<br />A different look.
         </h2>
@@ -27,10 +36,9 @@ export default function TemplateShowcase() {
         </p>
       </div>
 
-      <div className="flex justify-center mb-8">
-        <div
+      <div data-reveal-child className="flex justify-center mb-8">
+        <div ref={card}
           className="h-[22rem] w-64 max-w-full bg-white rounded-lg shadow-2xl text-gray-900 overflow-hidden sm:h-96 sm:w-72"
-          key={active}
         >
           <div className="p-4" style={{ backgroundColor: preview.accent + '22' }}>
             <h3 className="text-xl font-bold">{preview.name}</h3>
@@ -52,7 +60,7 @@ export default function TemplateShowcase() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-6 mb-8">
+      <div data-reveal-child className="flex items-center justify-center gap-6 mb-8">
         <button
           onClick={prev}
           className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center hover:border-teal-500 transition"
@@ -73,11 +81,11 @@ export default function TemplateShowcase() {
         </button>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-3">
+      <div data-reveal-child className="flex flex-wrap justify-center gap-3">
         {templates.map((t, i) => (
           <button
             key={t}
-            onClick={() => setIndex(i)}
+            onClick={() => change(i, i > index ? 1 : -1)}
             className={`px-4 py-2 rounded-lg text-sm transition ${
               i === index ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'
             }`}

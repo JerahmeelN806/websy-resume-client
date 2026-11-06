@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { gsap } from '../lib/motion'
 
 const formats = [
   { ext: '.pdf', label: 'PDF' },
@@ -7,12 +8,20 @@ const formats = [
   { ext: '.json', label: 'JSON' },
 ]
 
-export default function ExportSection() {
+export default function ExportSection({ reducedMotion }: { reducedMotion: boolean }) {
   const [selected, setSelected] = useState('PDF')
+  const card = useRef<HTMLDivElement>(null)
+  const changing = useRef(false)
+  const selectFormat = (format: string) => {
+    if (format === selected || changing.current) return
+    if (reducedMotion) return setSelected(format)
+    changing.current = true
+    gsap.to(card.current, { rotateY: 90, autoAlpha: .35, duration: .16, ease: 'power2.in', onComplete: () => { setSelected(format); gsap.to(card.current, { rotateY: 0, autoAlpha: 1, duration: .2, ease: 'power2.out', onComplete: () => { changing.current = false } }) } })
+  }
 
   return (
-    <div className="max-w-6xl mx-auto border-t border-slate-800 px-4 py-12 sm:px-8 sm:py-20">
-      <div className="grid md:grid-cols-2 gap-8 mb-10">
+    <div data-reveal className="max-w-6xl mx-auto border-t border-slate-800 px-4 py-12 sm:px-8 sm:py-20">
+      <div data-reveal-child className="grid md:grid-cols-2 gap-8 mb-10">
         <h2 className="text-4xl font-bold leading-tight">
           Take it<br />with you.
         </h2>
@@ -22,9 +31,9 @@ export default function ExportSection() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-10 items-start">
-        <div className="relative flex h-72 justify-center sm:h-80">
+        <div data-reveal-child className="relative flex h-72 justify-center sm:h-80">
           <div className="absolute h-full w-52 sm:w-60 bg-slate-800 rounded-lg -rotate-3" />
-          <div className="relative h-full w-52 sm:w-60 bg-teal-100 rounded-lg shadow-2xl text-gray-900 p-5 flex flex-col justify-between">
+          <div ref={card} className="relative h-full w-52 sm:w-60 bg-teal-100 rounded-lg shadow-2xl text-gray-900 p-5 flex flex-col justify-between [transform-style:preserve-3d]">
             <div>
               <p className="text-xs text-gray-600 mb-6">Websy Resume</p>
               <h3 className="text-xl font-bold">Alex Morgan</h3>
@@ -39,12 +48,12 @@ export default function ExportSection() {
           </div>
         </div>
 
-        <div>
+        <div data-reveal-child>
           <div className="border border-slate-800 rounded-xl overflow-hidden mb-6">
             {formats.map((f) => (
               <button
                 key={f.label}
-                onClick={() => setSelected(f.label)}
+                onClick={() => selectFormat(f.label)}
                 className={`w-full flex items-center justify-between px-5 py-4 border-b border-slate-800 last:border-b-0 transition ${
                   selected === f.label ? 'bg-slate-900' : 'hover:bg-slate-900/50'
                 }`}
